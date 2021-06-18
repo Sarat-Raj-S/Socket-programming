@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>Report_Amplifier_and_Water_chiller_Write_Command.html</h1>
+    <p>Report generated on 02-Jun-2021 at 10:35:38 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.10.0", "pytest": "6.2.4"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.19041-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.7.4</td></tr></table>
+    <h2>Summary</h2>
+    <p>7 tests ran in 124.86 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">3 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">4 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_water_chiller_ON_command_is_set_THEN_chiller_status_is_OPERATIONAL</td>
+          <td class="col-duration">17.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_WHEN_water_chiller_ON_command_is_set_THEN_chiller_status_is_OPERATIONAL():<br/>        socket.send(b&quot;\x10\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller command off &lt;&lt;&quot;, socket.recv(7))<br/>        time.sleep(sleep_time*2.5)<br/>        socket.send(b&quot;\x10\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n water chiller command on &lt;&lt;&quot;, socket.recv(7))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller data &gt;&gt;&quot;, b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        status_data = socket.recv(21)<br/>        print(&quot;\n water chiller data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Chiller status &lt;&lt;&quot;,bin(ord(status_data[18:19]))[2:].rjust(8, &#x27;0&#x27;)[7])<br/>&gt;       assert bin(ord(status_data[18:19]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;1&#x27;<br/><span class="error">E       AssertionError: assert &#x27;0&#x27; == &#x27;1&#x27;</span><br/><span class="error">E         - 1</span><br/><span class="error">E         + 0</span><br/><br/>test_Write_Commands_Fat.py:492: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command off &lt;&lt; b&#x27;\x00\x00\x00\x01\x04\x00\x1a&#x27;
+
+ water chiller command on &lt;&lt; b&#x27;\x00\x00\x00;\xd7\x1aB&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;Q\xbb\x8b&gt;0\x96\xb2A\xf5\xd9\xacA\x00\x00\x98A\xd7\xa3\xf8@\x00&#x27;
+
+ Chiller status &lt;&lt; 0
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_chiller_is_OPERATIONAL_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET</td>
+          <td class="col-duration">20.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_chiller_is_OPERATIONAL_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET():<br/>        socket.send(b&quot;\x10\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n water chiller command on &lt;&lt;&quot;, socket.recv(7))<br/>        time.sleep(sleep_time)<br/>        set_value = 20.5<br/>        socket.send(b&quot;\x11\x00\x04\x00\x00\x00&quot; + struct.pack(&quot;&lt;f&quot;, set_value))<br/>        print(&quot;\n water chiller water temperature set &lt;&lt;&quot;, socket.recv(10))<br/>        time.sleep(sleep_time*3)<br/>        socket.send(b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller data &gt;&gt;&quot;, b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        status_data = socket.recv(21)<br/>        print(&quot;\n water chiller data &lt;&lt;&quot;, status_data)<br/>        set_point_temperature_bytes = status_data[14:18]<br/>        print(&quot;\n water chiller status bytes 7-10  &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[6:10])[0])<br/>        print(&quot;\n water chiller status bytes 11-14 &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[10:14])[0])<br/>        print(&quot;\n water chiller status bytes 15-18 &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[14:18])[0])<br/>        print(&quot;\n Chiller temperature &lt;&lt;&quot;, struct.unpack(&quot;&lt;f&quot;, set_point_temperature_bytes)[0])<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, set_point_temperature_bytes)[0], is_(close_to(set_value, 10)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: a numeric value within &lt;10&gt; of &lt;20.5&gt;</span><br/><span class="error">E            but: &lt;1.401298464324817e-45&gt; differed by &lt;20.5&gt;</span><br/><br/>test_Write_Commands_Fat.py:512: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command on &lt;&lt; b&#x27;\x87\x10\x00\x01\x00\x00\x00&#x27;
+
+ water chiller water temperature set &lt;&lt; b&#x27;\x00\x05\x00\x0f\x00\x00\x00\xcd\xcc\xa0&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;A\xc3\xf5\xa8&gt;\xcd\xcc\xa0A\x00\x00\x02\x10\x00\x01\x00\x00\x00\x00\x10\x00&#x27;
+
+ water chiller status bytes 7-10  &lt;&lt; 6.026990300254896e-39
+
+ water chiller status bytes 11-14 &lt;&lt; 1.4700854033415937e-39
+
+ water chiller status bytes 15-18 &lt;&lt; 1.401298464324817e-45
+
+ Chiller temperature &lt;&lt; 1.401298464324817e-45
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_chiller_is_STANDBY_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET</td>
+          <td class="col-duration">20.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_chiller_is_STANDBY_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET():<br/>        socket.send(b&quot;\x10\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller command on &lt;&lt;&quot;, socket.recv(7))<br/>        time.sleep(sleep_time)<br/>        set_value = 20.1<br/>        socket.send(b&quot;\x11\x00\x04\x00\x00\x00&quot; + struct.pack(&quot;&lt;f&quot;, set_value))<br/>        print(&quot;\n water chiller water temperature set &lt;&lt;&quot;, socket.recv(10))<br/>        time.sleep(sleep_time*3)<br/>        socket.send(b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller data &gt;&gt;&quot;, b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        status_data = socket.recv(21)<br/>        print(&quot;\n water chiller data &lt;&lt;&quot;, status_data)<br/>        set_point_temperature_bytes = status_data[14:18]<br/>        print(&quot;\n Chiller temperature &lt;&lt;&quot;, struct.unpack(&quot;&lt;f&quot;, set_point_temperature_bytes)[0])<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, set_point_temperature_bytes)[0], is_(close_to(set_value, 5)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: a numeric value within &lt;5&gt; of &lt;20.1&gt;</span><br/><span class="error">E            but: &lt;1.5615621670927177e-39&gt; differed by &lt;20.1&gt;</span><br/><br/>test_Write_Commands_Fat.py:530: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command on &lt;&lt; b&#x27;\x01\x00\x00\x00\x01\x05\x00&#x27;
+
+ water chiller water temperature set &lt;&lt; b&#x27;\x0f\x00\x00\x00\x9a\x99\xa1A\xd7\xa3&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\xb8@\xcd\xcc\xa0A\x01\x00\x02\x10\x00\x01\x00\x00\x00\x01\x11\x00\x04\x00\x00&#x27;
+
+ Chiller temperature &lt;&lt; 1.5615621670927177e-39
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_chiller_reset_error_command_IS_issued_all_the_errors_are_RESET_and_turn_water_chiller_ON</td>
+          <td class="col-duration">5.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_WHEN_chiller_reset_error_command_IS_issued_all_the_errors_are_RESET_and_turn_water_chiller_ON():<br/>        socket.send(b&quot;\x14\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller reset set &lt;&lt;&quot;, socket.recv(8))<br/>        socket.send(b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n water chiller data &gt;&gt;&quot;, b&quot;\x05\x00\x00\x00\x00\x00&quot;)<br/>        status_data = socket.recv(21)<br/>        print(&quot;\n water chiller data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Chiller error code&quot;, status_data[19:21])<br/>        error_bits_of_byte1 = bin(ord(status_data[19:20]))[2:].rjust(8, &#x27;0&#x27;)<br/>        error_bits_of_byte2 = bin(ord(status_data[20:21]))[2:].rjust(8, &#x27;0&#x27;)<br/>        print(&quot;\n error &lt;&lt;&quot;, error_bits_of_byte1, error_bits_of_byte2)<br/>        dry_run_error = int(error_bits_of_byte1[0])<br/>        water_level_warning = int(error_bits_of_byte1[1])<br/>        low_pressure_error = int(error_bits_of_byte1[2])<br/>        flow_rate_error = int(error_bits_of_byte1[3])<br/>        high_temperature_warning = int(error_bits_of_byte1[4])<br/>        low_temperature_warning = int(error_bits_of_byte1[5])<br/>        high_temperature_error = int(error_bits_of_byte1[6])<br/>        low_temperature_error = int(error_bits_of_byte1[7])<br/>        high_pressure_error = int(error_bits_of_byte2[7])<br/>        time.sleep(sleep_time)<br/>&gt;       assert (dry_run_error or water_level_warning or low_pressure_error or flow_rate_error or high_temperature_warning or low_temperature_warning or high_temperature_error or low_temperature_error or high_pressure_error) == 0<br/><span class="error">E       assert 1 == 0</span><br/><span class="error">E         +1</span><br/><span class="error">E         -0</span><br/><br/>test_Write_Commands_Fat.py:555: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller reset set &lt;&lt; b&#x27;\x00\x00\x00\xa4A\x05\x00\x0f&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x00\x00\x00\x9a\x99\xa1A\xd7\xa3\xb8@\x00\x00\xa4A\x01\x00\x02\x10\x00\x01&#x27;
+
+ Chiller error code b&#x27;\x00\x01&#x27;
+
+ error &lt;&lt; 00000000 00000001
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_amplifier_OFF_command_is_set_THEN_amplifier_status_is_STANDBY</td>
+          <td class="col-duration">29.69</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier control b&#x27;\x04\x00\x1a\x00\x00\x00S&#x27;
+
+ Amplifier data &gt;&gt; b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+
+ Amplifier data &lt;&lt; b&#x27;\x92\x1bBX\xb9\x8c&gt;\xcf\xf0\xb2Ap*\xadA\xa6a\xb7@\xecQX\xc1\x00D\x12\x00\x01\x00\x00\x00\x00&#x27;
+
+ Amplifier status &lt;&lt; 0  
+ amplifier control &lt;&lt;  00000000
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_amplifier_ON_command_is_set_THEN_amplifier_status_is_OPERATIONAL</td>
+          <td class="col-duration">20.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier control &lt;&lt;  b&#x27;\x04\x00\x1a\x00\x00\x002&#x27;
+
+ Amplifier control &lt;&lt;  b&#x27;\x90\x1bB\xd5\x94\x8c&gt;&#x27;
+
+ Amplifier data &gt;&gt; b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+
+ Amplifier data &lt;&lt; b&#x27;\xdf\xbd\xb2A\x009\xacA\xf2\x9b\xe3@\xcd\xcc\x1c\xc1\x00A\x04\x00\x1a\x00\x00\x00\xa8d\x1bBg\xe4\x8a&gt;&#x27;
+
+ Amplifier status &lt;&lt; 1  
+ amplifier control &lt;&lt;  00111110
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_water_chiller_OFF_command_is_set_THEN_chiller_status_is_STANDBY</td>
+          <td class="col-duration">12.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command off &lt;&lt; b&#x27;\x9d\xb2\xb2A\xa1J\xad&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;A\x1dF\xed@\xcd\xcc\xac\xc0\x00A\x12\x00\x01\x00\x00\x00\x00\x12\x00\x01&#x27;
+
+ Chiller status &lt;&lt; 0
+<br/></div></td></tr></tbody></table></body></html>

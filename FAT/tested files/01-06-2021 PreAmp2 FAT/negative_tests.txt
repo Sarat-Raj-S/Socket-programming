@@ -1,0 +1,456 @@
+
+
+######################################### negative tests #########################################
+
+# Sending commad b"\x08\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x01"
+# Sending commad b"\x02\x00\x00\x00\x00\x00"
+# Byte 6, Bit 6 = LDD Trigger status
+def test_GIVEN_ldd_control_OFF_WHEN_trigger_command_is_set_THEN_trigger_status_is_NOT_ON():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger<<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger<<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[6:7]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] != '1'
+
+
+# Sending commad b"\x08\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x01"
+# Sending commad b"\x02\x00\x00\x00\x00\x00"
+# Byte 6, Bit 6 = LDD Trigger status
+def test_GIVEN_ldd_control_and_trigger_are_ON_WHEN_ldd_control_command_is_set_to_STANDBY_THEN_trigger_status_is_NOT_ON():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger<<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[6:7]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] != '1'
+    
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x01"
+# Sending commad b"\x02\x00\x00\x00\x00\x00"
+# Byte 6, Bit 5 = LDD Channel status
+def test_GIVEN_ldd_control_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_to_ON_THEN_channel_status_is_NOT_ON():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger<<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[6:7]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] != '1'
+
+# Sending commad b"\x08\x00\x01\x00\x00\x00\x1"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x01"
+# Sending commad b"\x02\x00\x00\x00\x00\x00"
+# Byte 6, Bit 5 = LDD Channel status
+def test_GIVEN_ldd_control_is_ON_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_ON_THEN_channel_status_is_NOT_ON():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[6:7]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] != '1'
+
+    
+# Sending commad b"\x08\x00\x01\x00\x00\x00\x1"
+# Sending commad b"\x09\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x00"
+# Sending commad b"\x0A\x00\x01\x00\x00\x00\x01"
+# Sending commad b"\x02\x00\x00\x00\x00\x00"
+# Byte 6, Bit 5 = LDD Channel status
+def test_GIVEN_ldd_control_is_ON_trigger_is_ON_channel_is_ON_WHEN_lld_trigger_command_is_set_OFF_THEN_channel_status_and_trigger_is_NOT_ON():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[6:7]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] != '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] != '1'
+
+
+def test_GIVEN_ldd_trigger_is_OFF_and_lld_trigger_SOURCE_command_is_EXTERNAL_then_LDD_Frequency_is_NOT_SET():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    trig_mode = '0'
+    trig_edge = '0'
+    trig_source = '1'
+    trigger_settings = int(trig_mode + trig_edge + trig_source,2).to_bytes(length = 1, byteorder = "little", signed = False)
+    socket.send(b"\x0F\x00\x01\x00\x00\x00"+trigger_settings)
+    print("\n trigger settings <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 5.0
+    socket.send(b"\x0D\x00\x04\x00\x00\x00" +  struct.pack("<f", set_value))
+    print("\n LDD Frequency set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n LDD Frequency <<",struct.unpack("<f", status_data[8:12])[0])
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '1'
+    assert_that(struct.unpack("<f", status_data[8:12])[0], is_not(close_to(set_value,5.0)))
+    
+    
+def test_GIVEN_ldd_trigger_is_OFF_and_lld_Frequency_is_SET_then_LDD_Frequency_is_NOT_SET():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Control <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 5.0
+    socket.send(b"\x0D\x00\x04\x00\x00\x00" +  struct.pack("<f", set_value))
+    print("\n LDD Frequency set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n LDD Frequency <<",struct.unpack("<f", status_data[8:12])[0])
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '1'
+    assert_that(struct.unpack("<f", status_data[8:12])[0], is_not(close_to(set_value,5.0)))
+
+
+def test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_ON_and_ldd_softstart_command_is_ENABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET_WITHIN_TIME():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + (0).to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[40:41]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[7] == '1'
+    set_value = 50
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + set_value.to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time/2)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n Pulse Current <<",int.from_bytes(status_data[24:28], byteorder="little", signed=False))
+    assert_that(int.from_bytes(status_data[24:28], byteorder="little", signed=False), is_not(close_to(set_value,5)))
+    time.sleep(sleep_time*3)
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + (0).to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    
+
+def test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_OFF_and_ldd_softstart_command_is_DISABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + (0).to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n status <<",bin(ord(status_data[40:41]))[2:].rjust(8, '0'))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '1'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '1'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[7] == '0'
+    set_value = 20
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + set_value.to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n Pulse Current <<",int.from_bytes(status_data[24:28], byteorder="little", signed=False))
+    assert_that(int.from_bytes(status_data[24:28], byteorder="little", signed=False), is_not(close_to(set_value,5)))
+
+    
+def test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_pulse_current_command_is_set_THEN_pulse_current_is_NOT():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + (0).to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 10
+    socket.send(b"\x0B\x00\x04\x00\x00\x00" + set_value.to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n Pulse Current <<",int.from_bytes(status_data[24:28], byteorder="little", signed=False))
+    assert_that(int.from_bytes(status_data[24:28], byteorder="little", signed=False), is_not(close_to(set_value,5)))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[1] == '0'
+
+
+def test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_bias_current_command_is_set_THEN_bias_current_is_NOT():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)    
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 0.3
+    socket.send(b"\x0C\x00\x04\x00\x00\x00" +  struct.pack("<f", set_value))
+    print("\n bias current set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n Bias Current <<",struct.unpack("<f", status_data[32:36])[0])
+    assert_that(struct.unpack("<f", status_data[32:36])[0], is_not(close_to(set_value,0.1)))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[1] == '0'
+
+def test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_frequency_command_is_set_THEN_frequency_is_NOT():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 9.0
+    socket.send(b"\x0D\x00\x04\x00\x00\x00" +  struct.pack("<f", set_value))
+    print("\n LDD Frequency set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("\n LDD Frequency <<",struct.unpack("<f", status_data[8:12])[0])
+    assert_that(struct.unpack("<f", status_data[8:12])[0], is_not(close_to(set_value,5.0)))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[1] == '0'
+
+def test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_pulse_width_command_is_set_THEN_pulse_width_is_NOT_set_close_to_setting():
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x01")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x0A\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Channel <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x09\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Trigger <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x08\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Operational <<", socket.recv(7))
+    time.sleep(sleep_time)
+    socket.send(b"\x15\x00\x01\x00\x00\x00\x00")
+    print("\n LDD Soft Start <<", socket.recv(7))
+    time.sleep(sleep_time)
+    set_value = 212
+    socket.send(b"\x0E\x00\x04\x00\x00\x00" +  set_value.to_bytes(length=4, byteorder="little", signed=False))
+    print("\n pulse width set <<", socket.recv(10))
+    time.sleep(sleep_time)
+    socket.send(b"\x02\x00\x00\x00\x00\x00")
+    print("\n driver data >>", b"\x02\x00\x00\x00\x00\x00")
+    status_data = socket.recv(41)
+    print("\n driver data <<", status_data)
+    print("status data ", status_data)
+    print("pulse width data ", status_data[16:20])
+    print("\n Pulse Width <<",int.from_bytes(status_data[16:20], byteorder="little", signed=False))
+    time.sleep(sleep_time*2)
+    assert_that(int.from_bytes(status_data[16:20], byteorder="little", signed=False), is_not(close_to(set_value,5)))
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[5] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[6] == '0'
+    assert bin(ord(status_data[6:7]))[2:].rjust(8, '0')[7] == '0'
+    assert bin(ord(status_data[40:41]))[2:].rjust(8, '0')[1] == '0'

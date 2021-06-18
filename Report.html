@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>Report.html</h1>
+    <p>Report generated on 02-Jun-2021 at 18:10:26 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.10.0", "pytest": "6.2.2"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Linux-4.19.104-microsoft-standard-x86_64-with-glibc2.29</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.8.5</td></tr></table>
+    <h2>Summary</h2>
+    <p>54 tests ran in 989.96 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">30 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">24 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_ldd_is_Connected_and_check_Default_values</td>
+          <td class="col-duration">0.50</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_WHEN_ldd_is_Connected_and_check_Default_values():<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt; &quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt; &quot;, status_data)<br/>    <br/>        print(&quot;\n Frequency &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0])<br/>        time.sleep(sleep_short)<br/>        assert_that(struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0], is_(close_to(10.0, 5.0)))<br/>    <br/>        print(&quot;\n Maximum Frequency &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[12:16])[0])<br/>        time.sleep(sleep_short)<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, status_data[12:16])[0], is_(close_to(10, 5.0)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: a numeric value within &lt;5.0&gt; of &lt;10&gt;</span><br/><span class="error">E            but: &lt;300.0&gt; differed by &lt;290.0&gt;</span><br/><br/>test_Write_Commands_Fat.py:559: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ driver data &gt;&gt;  b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt;  b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ Frequency &lt;&lt; 10.0
+
+ Maximum Frequency &lt;&lt; 300.0
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_amplifier_is_Connected_THEN_get_amplifier_command_shows_CONNECTED</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_WHEN_amplifier_is_Connected_THEN_get_amplifier_command_shows_CONNECTED():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:656: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_pump_relative_humidity_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_pump_relative_humidity_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:667: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_pump_waterflow_rate_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_pump_waterflow_rate_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:679: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_pump_ambient_temperature_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_pump_ambient_temperature_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:691: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_pump_heat_sink_temperature_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_pump_heat_sink_temperature_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:703: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_amplifier_vacuum_pressure_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_amplifier_vacuum_pressure_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:715: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_crystal_temperature_is_close_to_setting</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_crystal_temperature_is_close_to_setting():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:728: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_all_pump_parameters_are_OK</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_all_pump_parameters_are_OK():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:741: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_amplifier_is_connected_THEN_all_amplifier_parameters_are_OK</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_amplifier_is_connected_THEN_all_amplifier_parameters_are_OK():<br/>        socket.send(b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n Amplifier data &gt;&gt; &quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/>&gt;       status_data = socket.recv(b&quot;\x04&quot;, b&quot;\x04\x00\x00\x00\x00\x00&quot;)<br/><span class="error">E       TypeError: &#x27;bytes&#x27; object cannot be interpreted as an integer</span><br/><br/>test_Write_Commands_Fat.py:761: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier data &gt;&gt;  b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_is_Connected_WHEN_ldd_softstart_command_is_set_to_ON_THEN_ldd_status_shows_softstart_ENABLED</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_is_Connected_WHEN_ldd_softstart_command_is_set_to_ON_THEN_ldd_status_shows_softstart_ENABLED():<br/>        socket.send(b&quot;\x15\x00\x01\x00\x00\x00\x01&quot;)<br/>&gt;       print(&quot;\n softstart on &lt;&lt;&quot;, receive(b&quot;\x15&quot;, b&quot;\x15\x00\x01\x00\x00\x00\x01&quot;))<br/><br/>test_Write_Commands_Fat.py:779: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>byte_check = b&#x27;\x15&#x27;, command = b&#x27;\x15\x00\x01\x00\x00\x00\x01&#x27;<br/><br/>    def receive(byte_check, command):<br/>&gt;       status_data = socket.recv(1024)<br/><span class="error">E       socket.timeout: timed out</span><br/><br/>test_Write_Commands_Fat.py:12: timeout<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_OFF_WHEN_trigger_command_is_set_THEN_trigger_status_is_NOT_ON</td>
+          <td class="col-duration">15.32</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_control_OFF_WHEN_trigger_command_is_set_THEN_trigger_status_is_NOT_ON():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>&gt;       print(&quot;\n LDD Trigger&lt;&lt;&quot;, receive(b&quot;\x00&quot;))<br/><span class="error">E       TypeError: receive() missing 1 required positional argument: &#x27;command&#x27;</span><br/><br/>test_Write_Commands_Fat.py:845: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_and_trigger_are_ON_WHEN_ldd_control_command_is_set_to_STANDBY_THEN_trigger_status_is_NOT_ON</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_control_and_trigger_are_ON_WHEN_ldd_control_command_is_set_to_STANDBY_THEN_trigger_status_is_NOT_ON():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>&gt;       print(&quot;\n LDD Control &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/><br/>test_Write_Commands_Fat.py:869: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>byte_check = b&#x27;\x08&#x27;, command = b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;<br/><br/>    def receive(byte_check, command):<br/>&gt;       status_data = socket.recv(1024)<br/><span class="error">E       socket.timeout: timed out</span><br/><br/>test_Write_Commands_Fat.py:12: timeout<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_to_ON_THEN_channel_status_is_NOT_ON</td>
+          <td class="col-duration">20.43</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_control_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_to_ON_THEN_channel_status_is_NOT_ON():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>&gt;       print(&quot;\n LDD Trigger&lt;&lt;&quot;, receive(b&quot;\x00&quot;))<br/><span class="error">E       TypeError: receive() missing 1 required positional argument: &#x27;command&#x27;</span><br/><br/>test_Write_Commands_Fat.py:905: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_is_ON_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_ON_THEN_channel_status_is_NOT_ON</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_control_is_ON_and_trigger_is_OFF_WHEN_lld_channel_command_is_set_ON_THEN_channel_status_is_NOT_ON():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>&gt;       print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/><br/>test_Write_Commands_Fat.py:931: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>byte_check = b&#x27;\x08&#x27;, command = b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;<br/><br/>    def receive(byte_check, command):<br/>&gt;       status_data = socket.recv(1024)<br/><span class="error">E       socket.timeout: timed out</span><br/><br/>test_Write_Commands_Fat.py:12: timeout<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_is_ON_trigger_is_ON_channel_is_ON_WHEN_lld_trigger_command_is_set_OFF_THEN_channel_status_and_trigger_is_NOT_ON</td>
+          <td class="col-duration">15.32</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_control_is_ON_trigger_is_ON_channel_is_ON_WHEN_lld_trigger_command_is_set_OFF_THEN_channel_status_and_trigger_is_NOT_ON():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Control &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>&gt;       print(&quot;\n LDD trigger &lt;&lt;&quot;, receive(b&quot;\x00&quot;))<br/><span class="error">E       TypeError: receive() missing 1 required positional argument: &#x27;command&#x27;</span><br/><br/>test_Write_Commands_Fat.py:972: TypeError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_OFF_and_lld_trigger_SOURCE_command_is_EXTERNAL_then_LDD_Frequency_is_NOT_SET</td>
+          <td class="col-duration">1.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_trigger_is_OFF_and_lld_trigger_SOURCE_command_is_EXTERNAL_then_LDD_Frequency_is_NOT_SET():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>&gt;       print(&quot;\n LDD Control &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/><br/>test_Write_Commands_Fat.py:986: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>byte_check = b&#x27;\x08&#x27;, command = b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;<br/><br/>    def receive(byte_check, command):<br/>&gt;       status_data = socket.recv(1024)<br/><span class="error">E       socket.timeout: timed out</span><br/><br/>test_Write_Commands_Fat.py:12: timeout<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_OFF_and_lld_Frequency_is_SET_then_LDD_Frequency_is_NOT_SET</td>
+          <td class="col-duration">25.66</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_trigger_is_OFF_and_lld_Frequency_is_SET_then_LDD_Frequency_is_NOT_SET():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Control &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        set_value = 5.0<br/>        socket.send(b&quot;\x0D\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value))<br/>        print(&quot;\n LDD Frequency set &lt;&lt;&quot;, receive(b&quot;\x0D&quot;, b&quot;\x0D\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value)))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n LDD Frequency &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0])<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[6] == &#x27;0&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[5] == &#x27;1&#x27;<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0], is_not(close_to(set_value,5.0)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5.0&gt; of &lt;5.0&gt;</span><br/><span class="error">E            but: but was &lt;5.0&gt;</span><br/><br/>test_Write_Commands_Fat.py:1044: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Frequency set &lt;&lt; b&#x27;\r\x00\x04\x00\x00\x00\x00\x00\xa0@&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00M\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ LDD Frequency &lt;&lt; 5.0
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_ON_and_ldd_softstart_command_is_ENABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET_WITHIN_TIME</td>
+          <td class="col-duration">105.94</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_ON_and_ldd_softstart_command_is_ENABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET_WITHIN_TIME():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x15\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Soft Start &lt;&lt;&quot;, receive(b&quot;\x15&quot;, b&quot;\x15\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n status &lt;&lt;&quot;,bin(ord(status_data[40:41]))[2:].rjust(8, &#x27;0&#x27;))<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[5] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[6] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[40:41]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;1&#x27;<br/>        set_value = 30<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Pulse Current &lt;&lt;&quot;,int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False))<br/>&gt;       assert_that(int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False), is_not(close_to(set_value,5)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5&gt; of &lt;30&gt;</span><br/><span class="error">E            but: but was &lt;30&gt;</span><br/><br/>test_Write_Commands_Fat.py:1081: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x01&#x27;
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x00\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x01&#x27;
+
+ status &lt;&lt; 00000001
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\x1e\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x1e\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x01&#x27;
+
+ Pulse Current &lt;&lt; 30
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_OFF_and_ldd_softstart_command_is_DISABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET</td>
+          <td class="col-duration">141.17</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_is_Connected_tigger_is_ON_and_channel_is_OFF_and_ldd_softstart_command_is_DISABLED_WHEN_ldd_pulse_current_IS_SET_THEN_ldd_pulse_current_is_NOT_SET():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Soft Start &lt;&lt;&quot;, receive(b&quot;\x15&quot;, b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Soft Start &lt;&lt;&quot;, receive(b&quot;\x15&quot;, b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n status &lt;&lt;&quot;,bin(ord(status_data[40:41]))[2:].rjust(8, &#x27;0&#x27;))<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[5] == &#x27;0&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[6] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[6:7]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;1&#x27;<br/>        assert bin(ord(status_data[40:41]))[2:].rjust(8, &#x27;0&#x27;)[7] == &#x27;0&#x27;<br/>        set_value = 20<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Pulse Current &lt;&lt;&quot;,int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False))<br/>&gt;       assert_that(int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False), is_not(close_to(set_value,5)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5&gt; of &lt;20&gt;</span><br/><span class="error">E            but: but was &lt;20&gt;</span><br/><br/>test_Write_Commands_Fat.py:1126: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x00&#x27;
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\x00\x00\x00\x00&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00K\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x00\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00000000
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\x14\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00K\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x01&#x27;
+
+ Pulse Current &lt;&lt; 20
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_pulse_current_command_is_set_THEN_pulse_current_is_NOT_SET</td>
+          <td class="col-duration">121.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_prerequsites_are_OFF_and_soft_start_is_OFF_WHEN_lld_pulse_current_command_is_set_THEN_pulse_current_is_NOT_SET():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Soft Start &lt;&lt;&quot;, receive(b&quot;\x15&quot;, b&quot;\x15\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + (0).to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Operational&lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        set_value = 10<br/>        socket.send(b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse current set &lt;&lt;&quot;, receive(b&quot;\x0B&quot;, b&quot;\x0B\x00\x04\x00\x00\x00&quot; + set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time*6)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Pulse Current &lt;&lt;&quot;,int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False))<br/>&gt;       assert_that(int.from_bytes(status_data[24:28], byteorder=&quot;little&quot;, signed=False), is_not(close_to(set_value,5)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5&gt; of &lt;10&gt;</span><br/><span class="error">E            but: but was &lt;10&gt;</span><br/><br/>test_Write_Commands_Fat.py:1166: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x00&#x27;
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\x00\x00\x00\x00&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Operational&lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\n\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00H\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x01&#x27;
+
+ Pulse Current &lt;&lt; 10
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_bias_current_command_is_set_THEN_bias_current_is_NOT</td>
+          <td class="col-duration">35.84</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_bias_current_command_is_set_THEN_bias_current_is_NOT():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Operational&lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        set_value = 2.0<br/>        socket.send(b&quot;\x0C\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value))<br/>        print(&quot;\n bias current set &lt;&lt;&quot;, receive(b&quot;\x0C&quot;, b&quot;\x0C\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value)))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n Bias Current &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[32:36])[0])<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, status_data[32:36])[0], is_not(close_to(set_value,1.0)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;1.0&gt; of &lt;2.0&gt;</span><br/><span class="error">E            but: but was &lt;2.0&gt;</span><br/><br/>test_Write_Commands_Fat.py:1204: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Operational&lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ bias current set &lt;&lt; b&#x27;\x0c\x00\x04\x00\x00\x00\x00\x00\x00@&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00H\x00\x00\x00\xa0@\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00@\x00\x00P@\x01&#x27;
+
+ Bias Current &lt;&lt; 2.0
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_frequency_command_is_set_THEN_frequency_is_NOT</td>
+          <td class="col-duration">35.84</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_frequency_command_is_set_THEN_frequency_is_NOT():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Operational&lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        set_value = 10.0<br/>        socket.send(b&quot;\x0D\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value))<br/>        print(&quot;\n LDD Frequency set &lt;&lt;&quot;, receive(b&quot;\x0D&quot;, b&quot;\x0D\x00\x04\x00\x00\x00&quot; +  struct.pack(&quot;&lt;f&quot;, set_value)))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;\n LDD Frequency &lt;&lt;&quot;,struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0])<br/>&gt;       assert_that(struct.unpack(&quot;&lt;f&quot;, status_data[8:12])[0], is_not(close_to(set_value,5.0)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5.0&gt; of &lt;10.0&gt;</span><br/><span class="error">E            but: but was &lt;10.0&gt;</span><br/><br/>test_Write_Commands_Fat.py:1238: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Operational&lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Frequency set &lt;&lt; b&#x27;\r\x00\x04\x00\x00\x00\x00\x00 A&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00H\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00@\x00\x00P@\x01&#x27;
+
+ LDD Frequency &lt;&lt; 10.0
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_pulse_width_command_is_set_THEN_pulse_width_is_NOT_set_close_to_setting</td>
+          <td class="col-duration">35.84</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">def test_GIVEN_ldd_prerequsites_are_OFF_WHEN_lld_pulse_width_command_is_set_THEN_pulse_width_is_NOT_set_close_to_setting():<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Operational &lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x01&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Channel &lt;&lt;&quot;, receive(b&quot;\x0A&quot;, b&quot;\x0A\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Trigger &lt;&lt;&quot;, receive(b&quot;\x09&quot;, b&quot;\x09\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n LDD Operational&lt;&lt;&quot;, receive(b&quot;\x08&quot;, b&quot;\x08\x00\x01\x00\x00\x00\x00&quot;))<br/>        time.sleep(sleep_time)<br/>        set_value = 202<br/>        socket.send(b&quot;\x0E\x00\x04\x00\x00\x00&quot; +  set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False))<br/>        print(&quot;\n pulse width set &lt;&lt;&quot;, receive(b&quot;\x0E&quot;, b&quot;\x0E\x00\x04\x00\x00\x00&quot; +  set_value.to_bytes(length=4, byteorder=&quot;little&quot;, signed=False)))<br/>        time.sleep(sleep_time)<br/>        socket.send(b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &gt;&gt;&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        status_data = receive(b&quot;\x02&quot;, b&quot;\x02\x00\x00\x00\x00\x00&quot;)<br/>        print(&quot;\n driver data &lt;&lt;&quot;, status_data)<br/>        print(&quot;status data &quot;, status_data)<br/>        print(&quot;pulse width data &quot;, status_data[16:20])<br/>        print(&quot;\n Pulse Width &lt;&lt;&quot;,int.from_bytes(status_data[16:20], byteorder=&quot;little&quot;, signed=False))<br/>&gt;       assert_that(int.from_bytes(status_data[16:20], byteorder=&quot;little&quot;, signed=False), is_not(close_to(set_value,5)))<br/><span class="error">E       AssertionError: </span><br/><span class="error">E       Expected: not a numeric value within &lt;5&gt; of &lt;202&gt;</span><br/><span class="error">E            but: but was &lt;202&gt;</span><br/><br/>test_Write_Commands_Fat.py:1274: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Operational&lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ pulse width set &lt;&lt; b&#x27;\x0e\x00\x04\x00\x00\x00\xca\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00H\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00@\x00\x00P@\x01&#x27;
+status data  b&#x27;\x02\x00#\x00\x00\x00H\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00@\x00\x00P@\x01&#x27;
+pulse width data  b&#x27;\xca\x00\x00\x00&#x27;
+
+ Pulse Width &lt;&lt; 202
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_ldd_control_ON_command_is_set_THEN_ldd_control_mode_is_OPERATIONAL</td>
+          <td class="col-duration">10.32</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ status &lt;&lt; 00001001
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_ldd_control_OFF_command_is_set_THEN_ldd_control_mode_is_STANDBY</td>
+          <td class="col-duration">5.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x08\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x00\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001000
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_ON_WHEN_trigger_command_is_set_THEN_trigger_status_is_ON</td>
+          <td class="col-duration">15.44</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Control &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0b\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x00\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001011
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_ON_WHEN_trigger_command_is_OFF_THEN_trigger_status_is_OFF</td>
+          <td class="col-duration">5.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\t\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x00\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001001
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_and_trigger_is_ON_WHEN_lld_channel_command_is_set_ON_THEN_channel_status_is_ON</td>
+          <td class="col-duration">20.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x00\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_control_and_trigger_is_ON_WHEN_lld_channel_command_is_set_OFF_THEN_channel_status_is_OFF</td>
+          <td class="col-duration">5.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0b\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x00\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001011
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_ON_WHEN_lld_bias_current_command_is_set_THEN_bias_current_is_set_close_to_setting</td>
+          <td class="col-duration">20.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ bias current set &lt;&lt; b&#x27;\x0c\x00\x04\x00\x00\x00\x9a\x99\x19?&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00\x80?\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ Bias Current &lt;&lt; 0.6000000238418579
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_ON_WHEN_lld_frequency_command_is_set_THEN_frequency_is_set_close_to_setting</td>
+          <td class="col-duration">20.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Frequency set &lt;&lt; b&#x27;\r\x00\x04\x00\x00\x00\x00\x00 A&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00 A\x00\x00\x96C \x03\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ LDD Frequency &lt;&lt; 10.0
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_ON_WHEN_lld_pulse_width_command_is_set_THEN_pulse_width_is_set_close_to_setting</td>
+          <td class="col-duration">20.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ pulse width set &lt;&lt; b&#x27;\x0e\x00\x04\x00\x00\x00\xca\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+status data  b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+pulse width data  b&#x27;\xca\x00\x00\x00&#x27;
+
+ Pulse Width &lt;&lt; 202
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_mode_command_is_set_to_SINGLE_THEN_trigger_mode_is_SINGLE</td>
+          <td class="col-duration">20.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x06&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\xcf\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 11001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_mode_command_is_set_to_CONTINUES_THEN_trigger_mode_is_CONTINUES</td>
+          <td class="col-duration">20.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger&lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x02&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 01001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_EDGE_command_is_set_to_POSITIVE_THEN_trigger_EDGE_is_POSITIVE</td>
+          <td class="col-duration">20.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger&lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x02&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 01001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_EDGE_command_is_set_to_NEGATIVE_THEN_trigger_EDGE_is_NEGATIVE</td>
+          <td class="col-duration">20.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger&lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00\x0f\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 00001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_SOURCE_command_is_set_to_EXTERNAL_THEN_trigger_SOURCE_is_EXTERNAL</td>
+          <td class="col-duration">20.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger&lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x03&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00o\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 01101111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_trigger_is_ON_WHEN_lld_trigger_SOURCE_command_is_set_to_INTERNAL_THEN_trigger_SOURCE_is_INTERNAL</td>
+          <td class="col-duration">20.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger&lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger Settings &lt;&lt; b&#x27;\x0f\x00\x01\x00\x00\x00\x02&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 01001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_ldd_reset_error_command_IS_issued_all_the_errors_are_RESET</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ ldd reset error command on &lt;&lt; b&#x27;\x13\x00\x01\x00\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ LDD error code b&#x27;\x00&#x27;
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_water_chiller_ON_command_is_set_THEN_chiller_status_is_OPERATIONAL</td>
+          <td class="col-duration">10.33</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command off &lt;&lt; b&#x27;\x10\x00\x01\x00\x00\x00\x00&#x27;
+
+ water chiller command on &lt;&lt; b&#x27;\x10\x00\x01\x00\x00\x00\x01&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x05\x00\x0f\x00\x00\x00\x00\x00\xa0A\x9a\x99\xb9@\x00\x00\x00\x00\x01\x00\x02&#x27;
+
+ Chiller status &lt;&lt; 1
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_water_chiller_OFF_command_is_set_THEN_chiller_status_is_STANDBY</td>
+          <td class="col-duration">5.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command off &lt;&lt; b&#x27;\x10\x00\x01\x00\x00\x00\x00&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x05\x00\x0f\x00\x00\x00\x00\x00\xa0A\x9a\x99\xb9@\x00\x00\x00\x00\x00\x00\x02&#x27;
+
+ Chiller status &lt;&lt; 0
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_chiller_is_OPERATIONAL_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET</td>
+          <td class="col-duration">20.34</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command on &lt;&lt; b&#x27;\x10\x00\x01\x00\x00\x00\x01&#x27;
+
+ water chiller water temperature set &lt;&lt; b&#x27;\x11\x00\x04\x00\x00\x00\x00\x00\x90A&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x05\x00\x0f\x00\x00\x00\x00\x00\x90A\x9a\x99\xb9@\x00\x00\x90A\x01\x04\x02&#x27;
+
+ water chiller status bytes 7-10  &lt;&lt; 18.0
+
+ water chiller status bytes 11-14 &lt;&lt; 5.800000190734863
+
+ water chiller status bytes 15-18 &lt;&lt; 18.0
+
+ Chiller temperature &lt;&lt; 18.0
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_chiller_is_STANDBY_WHEN_water_chiller_temperature_is_set_THEN_check_if_temperature_is_SET</td>
+          <td class="col-duration">20.33</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller command off &lt;&lt; b&#x27;\x10\x00\x01\x00\x00\x00\x00&#x27;
+
+ water chiller water temperature set &lt;&lt; b&#x27;\x11\x00\x04\x00\x00\x00\x00\x00\xf0A&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+
+ Chiller temperature &lt;&lt; 30.0
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_chiller_reset_error_command_IS_issued_all_the_errors_are_RESET</td>
+          <td class="col-duration">5.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller reset set &lt;&lt; b&#x27;\x14\x00\x02\x00\x00\x00\x00\x02&#x27;
+
+ water chiller data &gt;&gt; b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt; b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+
+ Chiller error code b&#x27;\x00\x02&#x27;
+
+ error &lt;&lt; 00000000 00000010
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_amplifier_ON_command_is_set_THEN_amplifier_status_is_OPERATIONAL</td>
+          <td class="col-duration">10.32</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier control &lt;&lt;  b&#x27;\x12\x00\x01\x00\x00\x00\x00&#x27;
+
+ Amplifier control b&#x27;\x12\x00\x01\x00\x00\x00\x01&#x27;
+
+ Amplifier data &gt;&gt; b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+
+ Amplifier data &lt;&lt; b&#x27;\x04\x00\r\x00\x00\x00\x00\x00\x14B\x9a\x99\x99&gt;\x00\x00\xb4A\x00\x00\xacA\x00\x00\x98A\x00\x00 \xc1\x00\x04&#x27;
+
+ Amplifier status &lt;&lt; 1  
+ amplifier control &lt;&lt;  00000100
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_amplifier_OFF_command_is_set_THEN_amplifier_status_is_STANDBY</td>
+          <td class="col-duration">5.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ Amplifier control &lt;&lt;  b&#x27;\x12\x00\x01\x00\x00\x00\x00&#x27;
+
+ Amplifier data &gt;&gt; b&#x27;\x04\x00\x00\x00\x00\x00&#x27;
+
+ Amplifier data &lt;&lt; b&#x27;\x04\x00\r\x00\x00\x00\x00\x00\x14B\x9a\x99\x99&gt;\x00\x00\xb4A\x00\x00\xacA\x00\x00\x98A\x00\x00 \xc1\x00\x00&#x27;
+
+ Amplifier status &lt;&lt; 0  
+ amplifier control &lt;&lt;  00000000
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_ldd_is_Connected_THEN_get_ldd_command_shows_CONNECTED</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ driver data &gt;&gt;  b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt;  b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ status &lt;&lt; 01001111
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_LDD_driver_is_operated_THEN_operational_parameters_are_OK</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ driver data &gt;&gt;  b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt;  b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\x14\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x00&#x27;
+
+ error code &lt;&lt; 0
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_Water_Chiller_is_Connected_THEN_get_water_chiller_data_command_shows_CONNECTED</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller data &gt;&gt;  b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt;  b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+
+ status &lt;&lt; 10
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WHEN_WATER_CHILLER_is_operated_THEN_operational_parameters_are_OK</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller data &gt;&gt;  b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt;  b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+
+ error &lt;&lt; 00000000 00000010
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WATER_CHILLER_WATER_FLOW_RATE_is_within_limits</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller data &gt;&gt;  b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt;  b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+water flow rate in water chiller is  5.800000190734863
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_WATER_CHILLER_WATER_TEMPERATURE_is_within_limits</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ water chiller data &gt;&gt;  b&#x27;\x05\x00\x00\x00\x00\x00&#x27;
+
+ water chiller data &lt;&lt;  b&#x27;\x05\x00\x0f\x00\x00\x00t\x12\x98A\x9a\x99\xb9@\x00\x00\xf0A\x00\x00\x02&#x27;
+water temperature in water chiller is  19.009010314941406
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_Write_Commands_Fat.py::test_GIVEN_ldd_prerequsites_are_ON_and_softstart_is_OFF_WHEN_lld_pulse_current_command_is_set_THEN_pulse_current_is_set_close_to_setting</td>
+          <td class="col-duration">105.82</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>
+ LDD Operational &lt;&lt; b&#x27;\x08\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Trigger &lt;&lt; b&#x27;\t\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Channel &lt;&lt; b&#x27;\n\x00\x01\x00\x00\x00\x01&#x27;
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x00&#x27;
+
+ pulse current set &lt;&lt; b&#x27;\x0b\x00\x04\x00\x00\x00\n\x00\x00\x00&#x27;
+
+ driver data &gt;&gt; b&#x27;\x02\x00\x00\x00\x00\x00&#x27;
+
+ driver data &lt;&lt; b&#x27;\x02\x00#\x00\x00\x00O\x00\x00\x00 A\x00\x00\x96C\xca\x00\x00\x00\xc4\t\x00\x00\n\x00\x00\x00\xf4\x01\x00\x00\x9a\x99\x19?\x00\x00P@\x01&#x27;
+
+ Pulse Current &lt;&lt; 10
+
+ LDD Soft Start &lt;&lt; b&#x27;\x15\x00\x01\x00\x00\x00\x00&#x27;
+<br/></div></td></tr></tbody></table></body></html>
